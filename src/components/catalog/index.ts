@@ -65,6 +65,7 @@ export class FleetHQFleetCatalog extends EmbedElement {
   @property({ type: String, attribute: "pickup" }) pickup: string | null = null;
   @property({ type: String, attribute: "dropoff" }) dropoff: string | null = null;
   @property({ type: Number, attribute: "location-id" }) locationId: number | null = null;
+  @property({ type: String, attribute: "checkout-target" }) checkoutTarget: "redirect" | "iframe" = "redirect";
 
   @state() private fleets: FleetSummary[] = [];
   @state() private page = 1;
@@ -177,6 +178,7 @@ export class FleetHQFleetCatalog extends EmbedElement {
                         cta-label=${this.ctaLabel}
                         pickup=${this.pickup || nothing}
                         dropoff=${this.dropoff || nothing}
+                        checkout-target=${this.checkoutTarget}
                         .fleet=${fleet}
                       ></fleethq-vehicle-card>
                     `,

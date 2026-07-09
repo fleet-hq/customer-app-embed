@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FleetHQ embed sandbox</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #f4f6fb;
+        color: #0f172a;
+      }
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        display: grid;
+        gap: 32px;
+      }
+      section {
+        background: #fff;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      h2 { margin: 0 0 16px; font-size: 16px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+      p.hint { color: #6b7280; margin: 0 0 16px; font-size: 13px; }
+      code { background: #eef2ff; padding: 2px 6px; border-radius: 6px; }
+      .card-strip { display: flex; gap: 16px; flex-wrap: wrap; }
+      fleethq-vehicle-card[fleet-id] { width: 300px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>FleetHQ embed sandbox</h1>
+        <p class="hint">
+          Serves the widgets against <code>localhost:8000</code> by default. Override with
+          <code>?tenant=faqtor.dev.fleethq.io</code> in the URL if you need a different tenant.
+        </p>
+      </header>
+
+      <section>
+        <h2>&lt;fleethq-search&gt;</h2>
+        <fleethq-search id="search" no-redirect></fleethq-search>
+      </section>
+
+      <section>
+        <h2>&lt;fleethq-fleet-catalog&gt;</h2>
+        <fleethq-fleet-catalog id="catalog" page-size="6"></fleethq-fleet-catalog>
+      </section>
+
+      <section>
+        <h2>&lt;fleethq-book-button&gt;</h2>
+        <p class="hint">Pass <code>?card=&lt;fleet-id&gt;</code> to see the standalone button below.</p>
+        <div id="button-strip"></div>
+      </section>
+
+      <section>
+        <h2>&lt;fleethq-vehicle-card fleet-id="…"&gt;</h2>
+        <p class="hint">
+          Point <code>?card=&lt;fleet-id&gt;</code> at a real fleet id to see the standalone card. Cards
+          re-fetch details from the API even when embedded directly.
+        </p>
+        <div class="card-strip" id="card-strip"></div>
+      </section>
+    </main>
+
+    <script type="module">
+      import "../src/loader.ts";
+
+      const params = new URLSearchParams(window.location.search);
+      const tenant = params.get("tenant") || "faqtor.dev.fleethq.io";
+      const cardId = Number(params.get("card") || 0);
+
+      window.FleetHQEmbed.init({ tenant });
+
+      const catalog = document.getElementById("catalog");
+      catalog.setAttribute("tenant", tenant);
+
+      document.getElementById("search").setAttribute("tenant", tenant);
+
+      if (cardId) {
+        const card = document.createElement("fleethq-vehicle-card");
+        card.setAttribute("tenant", tenant);
+        card.setAttribute("fleet-id", String(cardId));
+        document.getElementById("card-strip").appendChild(card);
+
+        const btn = document.createElement("fleethq-book-button");
+        btn.setAttribute("tenant", tenant);
+        btn.setAttribute("fleet-id", String(cardId));
+        btn.setAttribute("new-tab", "");
+        document.getElementById("button-strip").appendChild(btn);
+      }
+
+      window.addEventListener("fleethq:search", (event) => {
+        console.log("[sandbox] fleethq:search", event.detail);
+        const { pickup, dropoff, locationId } = event.detail;
+        catalog.setAttribute("pickup", pickup);
+        catalog.setAttribute("dropoff", dropoff);
+        if (locationId) catalog.setAttribute("location-id", String(locationId));
+        else catalog.removeAttribute("location-id");
+      });
+
+      window.addEventListener("fleethq:book", (event) => {
+        console.log("[sandbox] fleethq:book", event.detail);
+      });
+      window.addEventListener("fleethq:catalog-loaded", (event) => {
+        console.log("[sandbox] fleethq:catalog-loaded", event.detail);
+      });
+    </script>
+  </body>
+</html>

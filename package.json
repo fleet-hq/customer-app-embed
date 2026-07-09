@@ -1,0 +1,21 @@
+{
+  "name": "customer-central-embed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "FleetHQ embeddable widgets for third-party partner sites",
+  "scripts": {
+    "dev": "vite --port 4321 --host",
+    "build": "tsc --noEmit && vite build",
+    "build:vercel": "tsc --noEmit && node scripts/build-vercel.mjs",
+    "preview": "vite preview --port 4322",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lit": "^3.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0"
+  }
+}

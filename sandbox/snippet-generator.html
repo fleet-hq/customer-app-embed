@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FleetHQ embed — install snippet generator</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #f4f6fb;
+        color: #0f172a;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+      }
+      section, form {
+        background: #fff;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      h2 { margin: 0 0 16px; font-size: 14px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+      label {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 13px;
+        color: #334155;
+      }
+      label span { display: block; margin-bottom: 4px; font-weight: 600; }
+      input, select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        font-size: 14px;
+        font-family: inherit;
+        background: #fff;
+      }
+      .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 16px;
+        border-radius: 12px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .copy {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: #0f172a;
+        color: #fff;
+        border: 0;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .copy:hover { filter: brightness(1.1); }
+      .preview {
+        border-top: 1px dashed #cbd5e1;
+        margin-top: 12px;
+        padding-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Install snippet generator</h1>
+        <p>Fill in the tenant details and pick a widget. Copy the snippet into the target site.</p>
+      </header>
+
+      <form id="cfg">
+        <h2>Tenant</h2>
+        <div class="row">
+          <label><span>Tenant slug or domain</span><input id="tenant" value="kaysgroove.com" /></label>
+          <label><span>Loader URL</span><input id="loader" value="https://embed.fleethq.io/v0/embed.js" /></label>
+          <label>
+            <span>API base (optional)</span>
+            <input id="api" placeholder="Leave blank for auto-detect" />
+          </label>
+        </div>
+
+        <h2 style="margin-top:12px;">Widget</h2>
+        <div class="row">
+          <label>
+            <span>Component</span>
+            <select id="widget">
+              <option value="catalog">&lt;fleethq-fleet-catalog&gt;</option>
+              <option value="search">&lt;fleethq-search&gt;</option>
+              <option value="card">&lt;fleethq-vehicle-card&gt;</option>
+              <option value="button">&lt;fleethq-book-button&gt;</option>
+            </select>
+          </label>
+          <label id="fleet-row" hidden><span>Fleet ID</span><input id="fleet" type="number" min="1" /></label>
+          <label><span>CTA label</span><input id="cta" value="Book now" /></label>
+          <label id="target-row" hidden>
+            <span>Checkout target</span>
+            <select id="target">
+              <option value="redirect">redirect (P1)</option>
+              <option value="iframe">iframe overlay (P2)</option>
+            </select>
+          </label>
+        </div>
+      </form>
+
+      <section>
+        <h2>Snippet</h2>
+        <pre id="snippet"></pre>
+        <button class="copy" id="copy">Copy snippet</button>
+      </section>
+
+      <section>
+        <h2>Live preview</h2>
+        <p style="color:#64748b;font-size:13px;">Rendered inside this page against the values above.</p>
+        <div class="preview" id="preview"></div>
+      </section>
+    </main>
+
+    <script type="module">
+      import "../src/loader.ts";
+
+      const $ = (id) => document.getElementById(id);
+      const els = {
+        tenant: $("tenant"),
+        loader: $("loader"),
+        api: $("api"),
+        widget: $("widget"),
+        fleet: $("fleet"),
+        fleetRow: $("fleet-row"),
+        cta: $("cta"),
+        target: $("target"),
+        targetRow: $("target-row"),
+        snippet: $("snippet"),
+        copy: $("copy"),
+        preview: $("preview"),
+      };
+
+      const attrEscape = (v) => String(v).replace(/"/g, "&quot;");
+
+      const scriptTag = () => {
+        const api = els.api.value.trim();
+        return `<script\n  src="${attrEscape(els.loader.value.trim())}"\n  data-fleethq-tenant="${attrEscape(els.tenant.value.trim())}"${api ? `\n  data-fleethq-api="${attrEscape(api)}"` : ""}\n  defer\n><\/script>`;
+      };
+
+      const widgetTag = () => {
+        const cta = els.cta.value.trim();
+        const targetAttr = els.target.value === "iframe" ? ` checkout-target="iframe"` : "";
+        switch (els.widget.value) {
+          case "catalog":
+            return `<fleethq-fleet-catalog${cta ? ` cta-label="${attrEscape(cta)}"` : ""}></fleethq-fleet-catalog>`;
+          case "search":
+            return `<fleethq-search></fleethq-search>`;
+          case "card":
+            return `<fleethq-vehicle-card fleet-id="${els.fleet.value || 1}"${cta ? ` cta-label="${attrEscape(cta)}"` : ""}${targetAttr}></fleethq-vehicle-card>`;
+          case "button":
+            return `<fleethq-book-button fleet-id="${els.fleet.value || 1}"${cta ? ` label="${attrEscape(cta)}"` : ""}${targetAttr}></fleethq-book-button>`;
+          default:
+            return "";
+        }
+      };
+
+      const render = () => {
+        const isBookable = els.widget.value === "card" || els.widget.value === "button";
+        els.fleetRow.hidden = !isBookable;
+        els.targetRow.hidden = !isBookable;
+        els.snippet.textContent = `${scriptTag()}\n\n${widgetTag()}`;
+
+        els.preview.innerHTML = "";
+        window.FleetHQEmbed?.init?.({
+          tenant: els.tenant.value.trim(),
+          apiBase: els.api.value.trim() || undefined,
+        });
+        els.preview.insertAdjacentHTML("beforeend", widgetTag());
+      };
+
+      for (const el of Object.values(els)) {
+        if (el && el.tagName && (el.tagName === "INPUT" || el.tagName === "SELECT")) {
+          el.addEventListener("input", render);
+          el.addEventListener("change", render);
+        }
+      }
+
+      els.copy.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(els.snippet.textContent);
+        els.copy.textContent = "Copied!";
+        setTimeout(() => (els.copy.textContent = "Copy snippet"), 1400);
+      });
+
+      render();
+    </script>
+  </body>
+</html>

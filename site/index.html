@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FleetHQ Embed — live demo</title>
+    <meta
+      name="description"
+      content="Drop-in Web Components that embed FleetHQ browsing and booking into any partner site."
+    />
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #f4f6fb;
+        color: #0f172a;
+      }
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+        display: grid;
+        gap: 32px;
+      }
+      header .kicker {
+        color: #6366f1;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+      }
+      h1 { font-size: 32px; margin: 0 0 12px; letter-spacing: -0.02em; }
+      p.lede { color: #475569; max-width: 640px; line-height: 1.55; }
+      section {
+        background: #fff;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      }
+      section h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+      section p.section-hint {
+        margin: 0 0 20px;
+        color: #64748b;
+        font-size: 13px;
+      }
+      .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+      .toolbar label { font-size: 13px; color: #334155; display: flex; gap: 8px; align-items: center; }
+      .toolbar input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; }
+      .links { display: flex; gap: 12px; margin-top: 16px; }
+      .links a {
+        text-decoration: none;
+        color: #0f172a;
+        background: #eef2ff;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .links a:hover { background: #e0e7ff; }
+      code { background: #0f172a; color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+    </style>
+    <script src="/v0/embed.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="kicker">FleetHQ Embed</div>
+        <h1>Live widget demo</h1>
+        <p class="lede">
+          These are the exact Web Components partners paste on their sites. Change the tenant in the URL
+          (<code>?tenant=&lt;domain&gt;</code>) to point at a different FleetHQ company.
+        </p>
+        <div class="links">
+          <a href="/snippet-generator.html">Snippet generator →</a>
+          <a href="https://github.com/fleethq/customer-central-embed" target="_blank" rel="noreferrer">Docs (README) →</a>
+        </div>
+      </header>
+
+      <section>
+        <h2>&lt;fleethq-search&gt;</h2>
+        <p class="section-hint">Emits <code>fleethq:search</code> and updates the catalog below.</p>
+        <fleethq-search id="search" no-redirect></fleethq-search>
+      </section>
+
+      <section>
+        <h2>&lt;fleethq-fleet-catalog&gt;</h2>
+        <p class="section-hint">Paginated grid + search. Card CTAs open the tenant's checkout.</p>
+        <fleethq-fleet-catalog id="catalog" page-size="6"></fleethq-fleet-catalog>
+      </section>
+
+      <section>
+        <h2>&lt;fleethq-book-button&gt; — iframe mode</h2>
+        <p class="section-hint">
+          Requires a valid fleet id — pass <code>?fleet=&lt;id&gt;</code>. Iframe mode opens the checkout in
+          an overlay via postMessage.
+        </p>
+        <div id="button-strip"></div>
+      </section>
+    </main>
+
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const params = new URLSearchParams(window.location.search);
+        const tenant = params.get("tenant") || "faqtor.dev.fleethq.io";
+        const fleet = params.get("fleet");
+
+        const boot = () => {
+          if (!window.FleetHQEmbed) return setTimeout(boot, 30);
+          window.FleetHQEmbed.init({ tenant });
+          const catalog = document.getElementById("catalog");
+          catalog.setAttribute("tenant", tenant);
+          document.getElementById("search").setAttribute("tenant", tenant);
+          if (fleet) {
+            const btn = document.createElement("fleethq-book-button");
+            btn.setAttribute("tenant", tenant);
+            btn.setAttribute("fleet-id", fleet);
+            btn.setAttribute("checkout-target", "iframe");
+            btn.setAttribute("label", "Open iframe checkout");
+            document.getElementById("button-strip").appendChild(btn);
+          }
+          window.addEventListener("fleethq:search", (event) => {
+            const { pickup, dropoff, locationId } = event.detail;
+            catalog.setAttribute("pickup", pickup);
+            catalog.setAttribute("dropoff", dropoff);
+            if (locationId) catalog.setAttribute("location-id", String(locationId));
+            else catalog.removeAttribute("location-id");
+          });
+          window.addEventListener("fleethq:checkout-complete", (e) => {
+            console.log("[demo] checkout complete", e.detail);
+            alert("Booking complete: #" + e.detail.bookingId);
+          });
+        };
+        boot();
+      });
+    </script>
+  </body>
+</html>

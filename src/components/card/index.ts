@@ -102,6 +102,7 @@ export class FleetHQVehicleCard extends EmbedElement {
   @property({ type: Object }) fleet: FleetSummary | FleetDetail | null = null;
   @property({ type: String, attribute: "cta-label" }) ctaLabel = "Book now";
   @property({ type: String, attribute: "checkout-target" }) checkoutTarget: "redirect" | "iframe" | "inline" = "redirect";
+  @property({ type: Boolean, attribute: "no-book" }) noBook = false;
   @property({ type: String, attribute: "pickup" }) pickup: string | null = null;
   @property({ type: String, attribute: "dropoff" }) dropoff: string | null = null;
 
@@ -198,9 +199,13 @@ export class FleetHQVehicleCard extends EmbedElement {
                 : html`<span class="card__price-unit">Contact for rates</span>`}
           </div>
         </div>
-        <div class="card__footer">
-          <button class="fhq-button" type="button" @click=${this.handleBook}>${this.ctaLabel}</button>
-        </div>
+        ${this.noBook
+          ? nothing
+          : html`
+              <div class="card__footer">
+                <button class="fhq-button" type="button" @click=${this.handleBook}>${this.ctaLabel}</button>
+              </div>
+            `}
       </article>
     `;
   }

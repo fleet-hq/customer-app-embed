@@ -106,6 +106,7 @@ export class FleetHQFleetCatalog extends EmbedElement {
   @property({ type: String, attribute: "dropoff" }) dropoff: string | null = null;
   @property({ type: Number, attribute: "location-id" }) locationId: number | null = null;
   @property({ type: String, attribute: "checkout-target" }) checkoutTarget: "redirect" | "iframe" | "inline" = "redirect";
+  @property({ type: Boolean, attribute: "no-book" }) noBook = false;
   @property({ type: Number, attribute: "inline-min-height" }) inlineMinHeight = 720;
   @property({ type: String, attribute: "back-label" }) backLabel = "Back to fleet";
 
@@ -326,6 +327,7 @@ export class FleetHQFleetCatalog extends EmbedElement {
                         pickup=${this.pickup || nothing}
                         dropoff=${this.dropoff || nothing}
                         checkout-target=${childTarget}
+                        ?no-book=${this.noBook}
                         .fleet=${fleet}
                       ></fleethq-vehicle-card>
                     `,

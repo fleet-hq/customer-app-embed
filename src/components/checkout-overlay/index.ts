@@ -28,23 +28,37 @@ const overlayStyles = css`
   .shell {
     position: absolute;
     inset: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    padding: 24px;
+    padding: 16px;
+  }
+  @media (min-width: 768px) {
+    .shell { padding: 32px; align-items: center; }
   }
   .modal {
     background: var(--fhq-color-surface);
     border-radius: var(--fhq-radius);
-    width: min(920px, 100%);
-    max-height: min(90vh, 900px);
+    width: min(960px, 100%);
+    max-height: none;
+    height: auto;
+    min-height: 480px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
     animation: fhq-scale 180ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+    margin: auto;
+  }
+  @media (min-width: 768px) {
+    .modal { max-height: min(92dvh, 940px); }
   }
   header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -57,19 +71,20 @@ const overlayStyles = css`
     border: 0;
     background: transparent;
     color: var(--fhq-color-text-muted);
-    font-size: 20px;
+    font-size: 24px;
     line-height: 1;
-    padding: 6px 10px;
+    padding: 6px 12px;
     border-radius: 8px;
     cursor: pointer;
   }
   .close:hover { background: rgba(15, 23, 42, 0.06); color: var(--fhq-color-text); }
   iframe {
-    flex: 1;
+    flex: 1 1 auto;
     width: 100%;
     border: 0;
     background: var(--fhq-color-surface);
-    min-height: 400px;
+    min-height: 640px;
+    display: block;
   }
   .status {
     padding: 40px;

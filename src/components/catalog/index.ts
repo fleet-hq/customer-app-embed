@@ -3,7 +3,9 @@ import { customElement, property, state } from "lit/decorators.js";
 
 import "../card";
 import { fetchFleets } from "../../runtime/api";
+import { buildBookingUrl } from "../../runtime/booking-url";
 import { resolveTenantSlug } from "../../runtime/tenant";
+import { originMatches, unpackMessage, type EmbedInboundMessage } from "../../runtime/messages";
 import type { FleetSummary, Paginated } from "../../runtime/types";
 import { EmbedElement } from "../base";
 
@@ -53,6 +55,44 @@ const catalogStyles = css`
     color: var(--fhq-color-text-muted);
     font-size: 13px;
   }
+  .inline {
+    display: flex;
+    flex-direction: column;
+    background: var(--fhq-color-surface);
+    border: 1px solid var(--fhq-color-border);
+    border-radius: var(--fhq-radius);
+    overflow: hidden;
+  }
+  .inline__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--fhq-color-surface-alt);
+    border-bottom: 1px solid var(--fhq-color-border);
+  }
+  .inline__title { font-size: 14px; font-weight: 600; color: var(--fhq-color-text); }
+  .inline__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: calc(var(--fhq-radius) - 4px);
+    border: 1px solid var(--fhq-color-border);
+    background: transparent;
+    color: var(--fhq-color-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .inline__back:hover { background: rgba(15, 23, 42, 0.05); }
+  .inline iframe {
+    width: 100%;
+    border: 0;
+    display: block;
+    background: var(--fhq-color-surface);
+  }
 `;
 
 @customElement("fleethq-fleet-catalog")
@@ -65,7 +105,9 @@ export class FleetHQFleetCatalog extends EmbedElement {
   @property({ type: String, attribute: "pickup" }) pickup: string | null = null;
   @property({ type: String, attribute: "dropoff" }) dropoff: string | null = null;
   @property({ type: Number, attribute: "location-id" }) locationId: number | null = null;
-  @property({ type: String, attribute: "checkout-target" }) checkoutTarget: "redirect" | "iframe" = "redirect";
+  @property({ type: String, attribute: "checkout-target" }) checkoutTarget: "redirect" | "iframe" | "inline" = "redirect";
+  @property({ type: Number, attribute: "inline-min-height" }) inlineMinHeight = 720;
+  @property({ type: String, attribute: "back-label" }) backLabel = "Back to fleet";
 
   @state() private fleets: FleetSummary[] = [];
   @state() private page = 1;
@@ -74,10 +116,23 @@ export class FleetHQFleetCatalog extends EmbedElement {
   @state() private fetching = false;
   @state() private fetchError: string | null = null;
   @state() private query = "";
+  @state() private inlineUrl: string | null = null;
+  @state() private inlineHeight = 720;
+  @state() private inlineTitle = "Complete your booking";
+
+  private messageHandler = (event: MessageEvent) => this.handleInlineMessage(event);
 
   connectedCallback(): void {
     super.connectedCallback();
     this.load();
+    window.addEventListener("message", this.messageHandler);
+    this.addEventListener("fleethq:book", this.onBookIntercept as unknown as EventListener);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.removeEventListener("message", this.messageHandler);
+    this.removeEventListener("fleethq:book", this.onBookIntercept as unknown as EventListener);
   }
 
   updated(changed: Map<string, unknown>): void {
@@ -121,6 +176,75 @@ export class FleetHQFleetCatalog extends EmbedElement {
     }
   }
 
+  private onBookIntercept = async (event: CustomEvent): Promise<void> => {
+    if (this.checkoutTarget !== "inline") return;
+    event.stopPropagation();
+    const detail = event.detail as { fleet?: FleetSummary; fleetId?: number; url?: string };
+    const fleet = detail.fleet || null;
+    const fleetId = fleet?.id ?? detail.fleetId;
+    if (!fleetId) return;
+    const url =
+      detail.url ||
+      (await buildBookingUrl({
+        fleetId,
+        pickup: this.pickup || undefined,
+        dropoff: this.dropoff || undefined,
+        locationId: this.locationId || undefined,
+        tenant: this.tenant || undefined,
+      }));
+    const decorated = this.decorateEmbedUrl(url);
+    this.inlineHeight = this.inlineMinHeight;
+    this.inlineUrl = decorated;
+    if (fleet) this.inlineTitle = `Complete your booking — ${fleet.year} ${fleet.make} ${fleet.model}`;
+    this.updateComplete.then(() => {
+      this.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  private decorateEmbedUrl(raw: string): string {
+    try {
+      const url = new URL(raw);
+      url.searchParams.set("embed", "1");
+      url.searchParams.set("embed_version", "0.1.0");
+      if (this.tenant) url.searchParams.set("embed_tenant", this.tenant);
+      return url.toString();
+    } catch {
+      return raw;
+    }
+  }
+
+  private handleInlineMessage(event: MessageEvent): void {
+    if (!this.inlineUrl) return;
+    if (!originMatches(event.origin, this.inlineUrl)) return;
+    const payload = unpackMessage<EmbedInboundMessage>(event.data);
+    if (!payload) return;
+    switch (payload.type) {
+      case "resize":
+        this.inlineHeight = Math.max(this.inlineMinHeight, Math.min(payload.height, 5000));
+        break;
+      case "booking-complete":
+        this.emitEvent("fleethq:checkout-complete", payload);
+        this.closeInline("success");
+        break;
+      case "booking-error":
+        this.emitEvent("fleethq:checkout-error", payload);
+        break;
+      case "close":
+        this.closeInline("user");
+        break;
+      case "handoff":
+        window.location.href = payload.url;
+        break;
+      default:
+        break;
+    }
+  }
+
+  private closeInline(reason: "user" | "success"): void {
+    this.inlineUrl = null;
+    this.emitEvent("fleethq:checkout-closed", { reason });
+  }
+
   private onSearch(e: Event): void {
     const input = e.target as HTMLInputElement;
     this.query = input.value;
@@ -148,6 +272,29 @@ export class FleetHQFleetCatalog extends EmbedElement {
 
   render() {
     if (this.configError) return html`<div class="catalog"><div class="catalog__error">${this.configError}</div></div>`;
+
+    if (this.checkoutTarget === "inline" && this.inlineUrl) {
+      return html`
+        <div class="catalog" part="catalog">
+          <div class="inline" part="inline">
+            <div class="inline__bar">
+              <span class="inline__title">${this.inlineTitle}</span>
+              <button class="inline__back" type="button" @click=${() => this.closeInline("user")}>
+                ← ${this.backLabel}
+              </button>
+            </div>
+            <iframe
+              src=${this.inlineUrl}
+              title=${this.inlineTitle}
+              allow="payment; clipboard-write"
+              style="height:${this.inlineHeight}px"
+            ></iframe>
+          </div>
+        </div>
+      `;
+    }
+
+    const childTarget = this.checkoutTarget;
 
     return html`
       <div class="catalog" part="catalog">
@@ -178,7 +325,7 @@ export class FleetHQFleetCatalog extends EmbedElement {
                         cta-label=${this.ctaLabel}
                         pickup=${this.pickup || nothing}
                         dropoff=${this.dropoff || nothing}
-                        checkout-target=${this.checkoutTarget}
+                        checkout-target=${childTarget}
                         .fleet=${fleet}
                       ></fleethq-vehicle-card>
                     `,

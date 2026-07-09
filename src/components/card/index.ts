@@ -101,7 +101,7 @@ export class FleetHQVehicleCard extends EmbedElement {
   @property({ type: Number, attribute: "fleet-id" }) fleetId: number | null = null;
   @property({ type: Object }) fleet: FleetSummary | FleetDetail | null = null;
   @property({ type: String, attribute: "cta-label" }) ctaLabel = "Book now";
-  @property({ type: String, attribute: "checkout-target" }) checkoutTarget: "redirect" | "iframe" = "redirect";
+  @property({ type: String, attribute: "checkout-target" }) checkoutTarget: "redirect" | "iframe" | "inline" = "redirect";
   @property({ type: String, attribute: "pickup" }) pickup: string | null = null;
   @property({ type: String, attribute: "dropoff" }) dropoff: string | null = null;
 
@@ -148,6 +148,9 @@ export class FleetHQVehicleCard extends EmbedElement {
       tenant: this.tenant || undefined,
     });
     this.emitEvent("fleethq:book", { fleet, url, target: this.checkoutTarget });
+    if (this.checkoutTarget === "inline") {
+      return;
+    }
     if (this.checkoutTarget === "iframe") {
       const result = await openCheckoutOverlay({ url, tenant: this.tenant });
       this.emitEvent("fleethq:checkout-result", { fleet, ...result });

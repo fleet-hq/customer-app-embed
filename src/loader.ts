@@ -61,22 +61,26 @@ const attachAutoOpen = (): void => {
       const target = event.target;
       if (!(target instanceof Element)) return;
 
-      // Manage-bookings trigger — opens the tenant's /manage lookup page
-      // inline. Attribute value is ignored (presence alone is the switch),
-      // so partners can drop it on a link/button/CMS field with no config.
+      // Manage-bookings trigger — opens the tenant's /manage lookup page.
+      // Attribute value is ignored (presence alone is the switch), so
+      // partners can drop it on a link / button / CMS field with no config.
       const manageTrigger = target.closest(`[${MANAGE_ATTR}]`);
       if (manageTrigger) {
         event.preventDefault();
         const tenant = manageTrigger.getAttribute("data-fleethq-tenant") || undefined;
+        const inlineTarget = resolveInlineTarget(manageTrigger);
+        const wantsModal =
+          manageTrigger.hasAttribute(MODAL_ATTR) || inlineTarget === null;
         buildManageUrl({ tenant })
           .then((url) =>
-            openInlineCheckout({
-              anchor: manageTrigger,
-              target: resolveInlineTarget(manageTrigger),
-              title: "Manage your booking",
-              url,
-              fleetId: 0,
-            }),
+            wantsModal
+              ? openCheckoutOverlay({ url, tenant, title: "Manage your booking" })
+              : openInlineCheckout({
+                  anchor: manageTrigger,
+                  target: inlineTarget,
+                  title: "Manage your booking",
+                  url,
+                }),
           )
           .catch((err) => console.warn("[FleetHQEmbed] openManage failed:", err));
         return;
@@ -89,10 +93,15 @@ const attachAutoOpen = (): void => {
       if (!params) return;
       event.preventDefault();
 
-      const wantsModal = trigger.hasAttribute(MODAL_ATTR);
+      const inlineTarget = resolveInlineTarget(trigger);
+      // No explicit inline container on the page → fall back to the
+      // modal overlay. Prevents partners with a header/footer/dropdown
+      // trigger from getting a checkout squeezed into whatever column
+      // the trigger element happens to live in.
+      const wantsModal = trigger.hasAttribute(MODAL_ATTR) || inlineTarget === null;
       const promise = wantsModal
         ? openCheckout(params)
-        : openInlineCheckout({ anchor: trigger, target: resolveInlineTarget(trigger), ...params });
+        : openInlineCheckout({ anchor: trigger, target: inlineTarget, ...params });
       promise.catch((err) => {
         console.warn("[FleetHQEmbed] openCheckout failed:", err);
       });

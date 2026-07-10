@@ -7,6 +7,7 @@ const NAMESPACE = "fleethq:embed";
 
 interface OpenInlineParams extends BuildBookingUrlParams {
   anchor: Element;
+  target?: Element | null;
   title?: string;
 }
 
@@ -102,7 +103,7 @@ const dispatch = (target: Element, name: string, detail: unknown): void => {
 
 export const openInlineCheckout = async (params: OpenInlineParams): Promise<void> => {
   injectStylesheet();
-  const { anchor, title = "Complete your booking", ...urlParams } = params;
+  const { anchor, target, title = "Complete your booking", ...urlParams } = params;
 
   removeActive();
 
@@ -137,8 +138,19 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
   container.appendChild(bar);
   container.appendChild(loading);
 
-  const parent = anchor.parentElement || document.body;
-  parent.insertBefore(container, anchor.nextSibling);
+  // Where to mount:
+  // 1. Explicit target element passed by the caller (via
+  //    data-fleethq-book-target on the trigger, or #fleethq-checkout on
+  //    the page) — replaces its contents. Useful for two-column layouts
+  //    where inserting after the button would squeeze the iframe into a
+  //    narrow column.
+  // 2. Fallback: sibling right after the trigger element.
+  if (target) {
+    target.replaceChildren(container);
+  } else {
+    const parent = anchor.parentElement || document.body;
+    parent.insertBefore(container, anchor.nextSibling);
+  }
   activeContainer = container;
 
   const url = decorateEmbedUrl(await buildBookingUrl(urlParams));

@@ -49,9 +49,20 @@ const attachAutoOpen = (): void => {
       event.preventDefault();
 
       const wantsModal = trigger.hasAttribute(MODAL_ATTR);
+      let inlineTarget: Element | null = null;
+      const targetSelector = trigger.getAttribute("data-fleethq-book-target");
+      if (targetSelector) {
+        try {
+          inlineTarget = document.querySelector(targetSelector);
+        } catch {
+          inlineTarget = null;
+        }
+      }
+      if (!inlineTarget) inlineTarget = document.getElementById("fleethq-checkout");
+
       const promise = wantsModal
         ? openCheckout(params)
-        : openInlineCheckout({ anchor: trigger, ...params });
+        : openInlineCheckout({ anchor: trigger, target: inlineTarget, ...params });
       promise.catch((err) => {
         console.warn("[FleetHQEmbed] openCheckout failed:", err);
       });

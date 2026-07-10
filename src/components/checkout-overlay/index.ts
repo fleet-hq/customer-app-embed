@@ -184,9 +184,12 @@ export class FleetHQCheckoutOverlay extends EmbedElement {
         this.postToChild({ type: "hello", version: __EMBED_VERSION__, tenant: this.tenant || "" });
         this.emitEvent("fleethq:checkout-ready", { url: this.url });
         break;
-      case "resize":
-        this.iframeHeight = clampHeight(payload.height);
+      case "resize": {
+        const requested = clampHeight(payload.height);
+        if (Math.abs(requested - this.iframeHeight) < 8) break;
+        this.iframeHeight = requested;
         break;
+      }
       case "navigate":
         this.emitEvent("fleethq:checkout-navigate", { url: payload.url });
         break;

@@ -177,9 +177,17 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
     const payload = unpackMessage<EmbedInboundMessage>(event.data);
     if (!payload) return;
     switch (payload.type) {
-      case "resize":
-        iframe.style.height = `${Math.min(Math.max(payload.height, 480), 5000)}px`;
+      case "resize": {
+        // Growth guard: only accept the new height if it's meaningfully
+        // different from the current one. Stops runaway feedback loops
+        // where the iframe body inherits our height (100vh / flex-grow)
+        // and reports a slightly larger value each cycle.
+        const requested = Math.min(Math.max(payload.height, 480), 4000);
+        const current = parseInt(iframe.style.height, 10) || 0;
+        if (Math.abs(requested - current) < 8) break;
+        iframe.style.height = `${requested}px`;
         break;
+      }
       case "booking-complete":
         dispatch(anchor, "fleethq:checkout-complete", payload);
         window.removeEventListener("message", messageHandler);

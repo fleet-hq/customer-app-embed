@@ -220,9 +220,12 @@ export class FleetHQFleetCatalog extends EmbedElement {
     const payload = unpackMessage<EmbedInboundMessage>(event.data);
     if (!payload) return;
     switch (payload.type) {
-      case "resize":
-        this.inlineHeight = Math.max(this.inlineMinHeight, Math.min(payload.height, 5000));
+      case "resize": {
+        const requested = Math.max(this.inlineMinHeight, Math.min(payload.height, 4000));
+        if (Math.abs(requested - this.inlineHeight) < 8) break;
+        this.inlineHeight = requested;
         break;
+      }
       case "booking-complete":
         this.emitEvent("fleethq:checkout-complete", payload);
         this.closeInline("success");

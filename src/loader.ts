@@ -6,6 +6,7 @@ import "./components/checkout-overlay";
 
 import { buildBookingUrl } from "./runtime/booking-url";
 import { openCheckoutOverlay } from "./runtime/checkout";
+import { openInlineCheckout } from "./runtime/inline-checkout";
 import { overrideSettings } from "./runtime/settings";
 import { loadTenantConfig } from "./runtime/tenant";
 import type { BuildBookingUrlParams, EmbedGlobal, EmbedInitOptions } from "./runtime/types";
@@ -16,6 +17,7 @@ const openCheckout = async (params: BuildBookingUrlParams) => {
 };
 
 const AUTO_ATTR = "data-fleethq-book";
+const MODAL_ATTR = "data-fleethq-book-modal";
 
 const parseAutoAttribute = (trigger: Element): BuildBookingUrlParams | null => {
   const raw = trigger.getAttribute(AUTO_ATTR);
@@ -45,7 +47,12 @@ const attachAutoOpen = (): void => {
       const params = parseAutoAttribute(trigger);
       if (!params) return;
       event.preventDefault();
-      openCheckout(params).catch((err) => {
+
+      const wantsModal = trigger.hasAttribute(MODAL_ATTR);
+      const promise = wantsModal
+        ? openCheckout(params)
+        : openInlineCheckout({ anchor: trigger, ...params });
+      promise.catch((err) => {
         console.warn("[FleetHQEmbed] openCheckout failed:", err);
       });
     },

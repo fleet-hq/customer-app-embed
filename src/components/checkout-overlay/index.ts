@@ -62,22 +62,32 @@ const overlayStyles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--fhq-color-border);
-    background: var(--fhq-color-surface-alt);
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    background: linear-gradient(180deg, #fafafb 0%, #f4f5f8 100%);
   }
-  .title { font-size: 14px; font-weight: 600; color: var(--fhq-color-text); }
+  .title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--fhq-color-text);
+  }
   .close {
-    border: 0;
-    background: transparent;
-    color: var(--fhq-color-text-muted);
-    font-size: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    color: var(--fhq-color-text);
+    font-size: 18px;
     line-height: 1;
-    padding: 6px 12px;
     border-radius: 8px;
     cursor: pointer;
+    transition: background 120ms;
   }
-  .close:hover { background: rgba(15, 23, 42, 0.06); color: var(--fhq-color-text); }
+  .close:hover { background: #f1f5f9; }
   iframe {
     flex: 1 1 auto;
     width: 100%;

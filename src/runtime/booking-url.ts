@@ -40,6 +40,13 @@ export const buildBookingUrl = async ({
     url.searchParams.set("dropoffLocId", String(locationId));
   }
 
+  // Always carry the tenant slug in the URL so a shared FleetHQ hosted
+  // checkout (fleethq-book.vercel.app) can identify the tenant without
+  // relying on the Host header. Tenants using their own aliased
+  // customer-central deployment still receive the param; their central
+  // treats a matching Host as the source of truth and safely ignores it.
+  url.searchParams.set("tenant", config.slug);
+
   url.searchParams.set("utm_source", "fleethq_embed");
   url.searchParams.set("utm_medium", "widget");
   return url.toString();

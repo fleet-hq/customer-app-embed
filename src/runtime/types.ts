@@ -80,6 +80,7 @@ export interface EmbedGlobal {
   init(options?: EmbedInitOptions): void;
   getConfig(tenant?: string): Promise<TenantConfig>;
   buildBookingUrl(params: BuildBookingUrlParams): Promise<string>;
+  openCheckout(params: BuildBookingUrlParams): Promise<{ reason: string }>;
 }
 
 export interface EmbedInitOptions {

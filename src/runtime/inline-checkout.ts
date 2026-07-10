@@ -1,6 +1,7 @@
 import type { BuildBookingUrlParams } from "./types";
 import { buildBookingUrl } from "./booking-url";
 import { originMatches, unpackMessage, type EmbedInboundMessage } from "./messages";
+import { clearSession, saveSession } from "./session";
 
 const CONTAINER_CLASS = "fhq-inline-checkout";
 const NAMESPACE = "fleethq:embed";
@@ -11,6 +12,12 @@ interface OpenInlineParams extends Partial<BuildBookingUrlParams> {
   title?: string;
   /** Explicit URL to load instead of building one from BuildBookingUrlParams. */
   url?: string;
+  /** CSS selector for the mount target, saved with the session so we can
+   *  re-open at the same spot after a page reload. */
+  targetSelector?: string | null;
+  /** If true, do not save the session — used when auto-restoring so we
+   *  don't rewrite an identical entry. */
+  skipSessionSave?: boolean;
 }
 
 let activeContainer: HTMLElement | null = null;
@@ -105,7 +112,15 @@ const dispatch = (target: Element, name: string, detail: unknown): void => {
 
 export const openInlineCheckout = async (params: OpenInlineParams): Promise<void> => {
   injectStylesheet();
-  const { anchor, target, title = "Complete your booking", url: explicitUrl, ...urlParams } = params;
+  const {
+    anchor,
+    target,
+    title = "Complete your booking",
+    url: explicitUrl,
+    targetSelector,
+    skipSessionSave,
+    ...urlParams
+  } = params;
 
   removeActive();
 
@@ -127,6 +142,7 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
   closeBtn.innerHTML = "&larr; Back";
   closeBtn.addEventListener("click", () => {
     dispatch(anchor, "fleethq:checkout-closed", { reason: "user" });
+    clearSession();
     removeActive();
   });
 
@@ -170,6 +186,16 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
 
   container.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  if (!skipSessionSave) {
+    saveSession({
+      url,
+      mode: "inline",
+      title,
+      targetSelector: targetSelector ?? null,
+      tenant: urlParams.tenant ?? null,
+    });
+  }
+
   const messageHandler = (event: MessageEvent): void => {
     if (!originMatches(event.origin, url)) return;
     if (!event.data || typeof event.data !== "object") return;
@@ -188,9 +214,22 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
         iframe.style.height = `${requested}px`;
         break;
       }
+      case "navigate":
+        // Iframe navigated to a new URL (booking success page, verify
+        // flow etc.). Update the saved session so a reload picks up the
+        // latest step instead of restarting from the checkout form.
+        saveSession({
+          url: payload.url,
+          mode: "inline",
+          title,
+          targetSelector: targetSelector ?? null,
+          tenant: urlParams.tenant ?? null,
+        });
+        break;
       case "booking-complete":
         dispatch(anchor, "fleethq:checkout-complete", payload);
         window.removeEventListener("message", messageHandler);
+        clearSession();
         removeActive();
         break;
       case "booking-error":
@@ -198,9 +237,11 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
         break;
       case "close":
         window.removeEventListener("message", messageHandler);
+        clearSession();
         removeActive();
         break;
       case "handoff":
+        clearSession();
         window.location.href = payload.url;
         break;
       default:

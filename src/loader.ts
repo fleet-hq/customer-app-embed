@@ -8,6 +8,7 @@ import { buildBookingUrl } from "./runtime/booking-url";
 import { buildManageUrl } from "./runtime/manage-url";
 import { openCheckoutOverlay } from "./runtime/checkout";
 import { openInlineCheckout } from "./runtime/inline-checkout";
+import { loadSession } from "./runtime/session";
 import { overrideSettings } from "./runtime/settings";
 import { loadTenantConfig } from "./runtime/tenant";
 import type { BuildBookingUrlParams, EmbedGlobal, EmbedInitOptions } from "./runtime/types";
@@ -128,12 +129,43 @@ const api: EmbedGlobal = {
   },
 };
 
+const restoreSessionIfAny = (): void => {
+  const state = loadSession();
+  if (!state) return;
+  if (state.mode !== "inline") return;
+  // Find a place to remount. Prefer the target selector we used originally,
+  // then fall back to the marker attribute / id conventions, then body.
+  let target: Element | null = null;
+  if (state.targetSelector) {
+    try {
+      target = document.querySelector(state.targetSelector);
+    } catch {
+      target = null;
+    }
+  }
+  if (!target) target = document.querySelector("[data-fleethq-checkout]");
+  if (!target) target = document.getElementById("fleethq-checkout");
+  if (!target) return;
+  openInlineCheckout({
+    anchor: target,
+    target,
+    url: state.url,
+    title: state.title,
+    tenant: state.tenant ?? undefined,
+    skipSessionSave: true,
+  }).catch((err) => console.warn("[FleetHQEmbed] session restore failed:", err));
+};
+
 if (typeof window !== "undefined") {
   window.FleetHQEmbed = Object.assign(window.FleetHQEmbed ?? {}, api);
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", attachAutoOpen, { once: true });
-  } else {
+  const boot = (): void => {
     attachAutoOpen();
+    restoreSessionIfAny();
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
   }
 }
 

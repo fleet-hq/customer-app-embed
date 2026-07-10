@@ -28,47 +28,48 @@ const injectStylesheet = (): void => {
   style.id = "fhq-inline-styles";
   style.textContent = `
     .${CONTAINER_CLASS} {
-      margin: 24px 0;
+      margin: 32px 0;
       background: #ffffff;
-      border-radius: 16px;
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+      border-radius: 20px;
       overflow: hidden;
       font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      animation: fhq-slide-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 20px 40px -12px rgba(15, 23, 42, 0.12);
+      animation: fhq-slide-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .${CONTAINER_CLASS}__bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 18px;
-      background: linear-gradient(180deg, #fafafb 0%, #f4f5f8 100%);
-      border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+      padding: 20px 24px;
+      background: #ffffff;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.05);
     }
     .${CONTAINER_CLASS}__title {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 18px;
+      font-weight: 700;
       color: #0f172a;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
     }
     .${CONTAINER_CLASS}__close {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid rgba(15, 23, 42, 0.12);
-      background: #ffffff;
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 0;
+      background: rgba(15, 23, 42, 0.04);
       color: #0f172a;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
-      transition: background 120ms;
+      transition: background 140ms ease, transform 140ms ease;
       font-family: inherit;
     }
-    .${CONTAINER_CLASS}__close:hover { background: #f1f5f9; }
+    .${CONTAINER_CLASS}__close:hover { background: rgba(15, 23, 42, 0.08); transform: translateX(-1px); }
+    .${CONTAINER_CLASS}__close svg { width: 14px; height: 14px; }
     .${CONTAINER_CLASS}__loading {
-      padding: 48px;
+      padding: 56px 24px;
       text-align: center;
       color: #64748b;
       font-size: 14px;
@@ -81,7 +82,7 @@ const injectStylesheet = (): void => {
       transition: height 180ms ease;
     }
     @keyframes fhq-slide-in {
-      from { transform: translateY(10px); opacity: 0; }
+      from { transform: translateY(12px); opacity: 0; }
       to { transform: none; opacity: 1; }
     }
   `;
@@ -115,7 +116,7 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
   const {
     anchor,
     target,
-    title = "Complete your booking",
+    title = "Reserve your rental",
     url: explicitUrl,
     targetSelector,
     skipSessionSave,
@@ -139,7 +140,9 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
   const closeBtn = document.createElement("button");
   closeBtn.className = `${CONTAINER_CLASS}__close`;
   closeBtn.type = "button";
-  closeBtn.innerHTML = "&larr; Back";
+  closeBtn.setAttribute("aria-label", "Close");
+  closeBtn.innerHTML =
+    '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg><span>Back</span>';
   closeBtn.addEventListener("click", () => {
     dispatch(anchor, "fleethq:checkout-closed", { reason: "user" });
     clearSession();

@@ -62,32 +62,33 @@ const overlayStyles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 20px;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-    background: linear-gradient(180deg, #fafafb 0%, #f4f5f8 100%);
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+    background: #ffffff;
   }
   .title {
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
     color: var(--fhq-color-text);
   }
   .close {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    background: #ffffff;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    background: rgba(15, 23, 42, 0.04);
     color: var(--fhq-color-text);
-    font-size: 18px;
+    font-size: 20px;
     line-height: 1;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: background 120ms;
+    transition: background 140ms ease;
   }
-  .close:hover { background: #f1f5f9; }
+  .close:hover { background: rgba(15, 23, 42, 0.08); }
   iframe {
     flex: 1 1 auto;
     width: 100%;
@@ -115,7 +116,7 @@ export class FleetHQCheckoutOverlay extends EmbedElement {
   static styles = [...EmbedElement.styles, overlayStyles];
 
   @property({ type: String }) url: string | null = null;
-  @property({ type: String }) title = "Complete your booking";
+  @property({ type: String }) title = "Reserve your rental";
   @property({ type: Boolean, reflect: true }) open = false;
 
   @state() private iframeHeight = 640;

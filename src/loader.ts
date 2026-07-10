@@ -8,7 +8,6 @@ import { buildBookingUrl } from "./runtime/booking-url";
 import { buildManageUrl } from "./runtime/manage-url";
 import { openCheckoutOverlay } from "./runtime/checkout";
 import { openInlineCheckout } from "./runtime/inline-checkout";
-import { loadSession } from "./runtime/session";
 import { overrideSettings } from "./runtime/settings";
 import { loadTenantConfig } from "./runtime/tenant";
 import type { BuildBookingUrlParams, EmbedGlobal, EmbedInitOptions } from "./runtime/types";
@@ -129,43 +128,17 @@ const api: EmbedGlobal = {
   },
 };
 
-const restoreSessionIfAny = (): void => {
-  const state = loadSession();
-  if (!state) return;
-  if (state.mode !== "inline") return;
-  // Find a place to remount. Prefer the target selector we used originally,
-  // then fall back to the marker attribute / id conventions, then body.
-  let target: Element | null = null;
-  if (state.targetSelector) {
-    try {
-      target = document.querySelector(state.targetSelector);
-    } catch {
-      target = null;
-    }
-  }
-  if (!target) target = document.querySelector("[data-fleethq-checkout]");
-  if (!target) target = document.getElementById("fleethq-checkout");
-  if (!target) return;
-  openInlineCheckout({
-    anchor: target,
-    target,
-    url: state.url,
-    title: state.title,
-    tenant: state.tenant ?? undefined,
-    skipSessionSave: true,
-  }).catch((err) => console.warn("[FleetHQEmbed] session restore failed:", err));
-};
-
 if (typeof window !== "undefined") {
   window.FleetHQEmbed = Object.assign(window.FleetHQEmbed ?? {}, api);
-  const boot = (): void => {
-    attachAutoOpen();
-    restoreSessionIfAny();
-  };
+  // Auto-open is a click-only affordance. We deliberately do NOT resume
+  // a saved session on page load — a returning customer sees their site
+  // as normal and re-opens the widget explicitly via the Reserve button.
+  // Their form data still lives in the iframe's sessionStorage, so the
+  // next open picks up exactly where they left off.
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot, { once: true });
+    document.addEventListener("DOMContentLoaded", attachAutoOpen, { once: true });
   } else {
-    boot();
+    attachAutoOpen();
   }
 }
 

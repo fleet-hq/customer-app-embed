@@ -74,7 +74,7 @@ const attachAutoOpen = (): void => {
         buildManageUrl({ tenant })
           .then((url) =>
             wantsModal
-              ? openCheckoutOverlay({ url, tenant, title: "Manage your booking" })
+              ? openCheckoutOverlay({ url, tenant, title: "Manage your booking" }).then(() => undefined)
               : openInlineCheckout({
                   anchor: manageTrigger,
                   target: inlineTarget,

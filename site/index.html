@@ -109,10 +109,17 @@
         const params = new URLSearchParams(window.location.search);
         const tenant = params.get("tenant") || "2";
         const fleet = params.get("fleet");
+        // Demo default: point at PROD backend so ?tenant=<real-tenant-slug>
+        // hits the live data. Override with ?api=dev to test dev backend or
+        // ?api=<full-url> for anything else.
+        const apiParam = params.get("api");
+        let apiBase = "https://backend.fleethq.io";
+        if (apiParam === "dev") apiBase = "https://backend-dev.fleethq.io";
+        else if (apiParam) apiBase = apiParam;
 
         const boot = () => {
           if (!window.FleetHQEmbed) return setTimeout(boot, 30);
-          window.FleetHQEmbed.init({ tenant });
+          window.FleetHQEmbed.init({ tenant, apiBase });
           const catalog = document.getElementById("catalog");
           catalog.setAttribute("tenant", tenant);
           document.getElementById("search").setAttribute("tenant", tenant);

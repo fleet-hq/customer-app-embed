@@ -50,6 +50,13 @@ const attachAutoOpen = (): void => {
 
       const wantsModal = trigger.hasAttribute(MODAL_ATTR);
       let inlineTarget: Element | null = null;
+      // Priority for picking the inline mount point (least surprising first):
+      //   1. Trigger says exactly where via ``data-fleethq-book-target="<css-selector>"``.
+      //   2. Any element on the page carries the marker attribute
+      //      ``data-fleethq-checkout`` — partners drop that on their preferred
+      //      container without a naming collision.
+      //   3. Legacy id="fleethq-checkout" convention for early adopters.
+      //   4. Fall through → widget inserts right after the trigger button.
       const targetSelector = trigger.getAttribute("data-fleethq-book-target");
       if (targetSelector) {
         try {
@@ -58,6 +65,7 @@ const attachAutoOpen = (): void => {
           inlineTarget = null;
         }
       }
+      if (!inlineTarget) inlineTarget = document.querySelector("[data-fleethq-checkout]");
       if (!inlineTarget) inlineTarget = document.getElementById("fleethq-checkout");
 
       const promise = wantsModal

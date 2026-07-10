@@ -5,10 +5,12 @@ import { originMatches, unpackMessage, type EmbedInboundMessage } from "./messag
 const CONTAINER_CLASS = "fhq-inline-checkout";
 const NAMESPACE = "fleethq:embed";
 
-interface OpenInlineParams extends BuildBookingUrlParams {
+interface OpenInlineParams extends Partial<BuildBookingUrlParams> {
   anchor: Element;
   target?: Element | null;
   title?: string;
+  /** Explicit URL to load instead of building one from BuildBookingUrlParams. */
+  url?: string;
 }
 
 let activeContainer: HTMLElement | null = null;
@@ -103,7 +105,7 @@ const dispatch = (target: Element, name: string, detail: unknown): void => {
 
 export const openInlineCheckout = async (params: OpenInlineParams): Promise<void> => {
   injectStylesheet();
-  const { anchor, target, title = "Complete your booking", ...urlParams } = params;
+  const { anchor, target, title = "Complete your booking", url: explicitUrl, ...urlParams } = params;
 
   removeActive();
 
@@ -138,13 +140,6 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
   container.appendChild(bar);
   container.appendChild(loading);
 
-  // Where to mount:
-  // 1. Explicit target element passed by the caller (via
-  //    data-fleethq-book-target on the trigger, or #fleethq-checkout on
-  //    the page) — replaces its contents. Useful for two-column layouts
-  //    where inserting after the button would squeeze the iframe into a
-  //    narrow column.
-  // 2. Fallback: sibling right after the trigger element.
   if (target) {
     target.replaceChildren(container);
   } else {
@@ -153,7 +148,16 @@ export const openInlineCheckout = async (params: OpenInlineParams): Promise<void
   }
   activeContainer = container;
 
-  const url = decorateEmbedUrl(await buildBookingUrl(urlParams));
+  const url = decorateEmbedUrl(
+    explicitUrl ??
+      (await buildBookingUrl({
+        fleetId: urlParams.fleetId ?? 0,
+        pickup: urlParams.pickup,
+        dropoff: urlParams.dropoff,
+        locationId: urlParams.locationId,
+        tenant: urlParams.tenant,
+      })),
+  );
 
   const iframe = document.createElement("iframe");
   iframe.className = `${CONTAINER_CLASS}__iframe`;

@@ -5,6 +5,7 @@ import "./components/book-button";
 import "./components/checkout-overlay";
 
 import { buildBookingUrl } from "./runtime/booking-url";
+import { buildManageUrl } from "./runtime/manage-url";
 import { openCheckoutOverlay } from "./runtime/checkout";
 import { openInlineCheckout } from "./runtime/inline-checkout";
 import { overrideSettings } from "./runtime/settings";
@@ -18,6 +19,7 @@ const openCheckout = async (params: BuildBookingUrlParams) => {
 
 const AUTO_ATTR = "data-fleethq-book";
 const MODAL_ATTR = "data-fleethq-book-modal";
+const MANAGE_ATTR = "data-fleethq-manage";
 
 const parseAutoAttribute = (trigger: Element): BuildBookingUrlParams | null => {
   const raw = trigger.getAttribute(AUTO_ATTR);
@@ -35,6 +37,22 @@ const parseAutoAttribute = (trigger: Element): BuildBookingUrlParams | null => {
   };
 };
 
+const resolveInlineTarget = (trigger: Element): Element | null => {
+  const targetSelector = trigger.getAttribute("data-fleethq-book-target");
+  if (targetSelector) {
+    try {
+      const t = document.querySelector(targetSelector);
+      if (t) return t;
+    } catch {
+      /* invalid selector — ignore */
+    }
+  }
+  return (
+    document.querySelector("[data-fleethq-checkout]") ||
+    document.getElementById("fleethq-checkout")
+  );
+};
+
 const attachAutoOpen = (): void => {
   if (typeof document === "undefined") return;
   document.addEventListener(
@@ -42,6 +60,29 @@ const attachAutoOpen = (): void => {
     (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+
+      // Manage-bookings trigger — opens the tenant's /manage lookup page
+      // inline. Attribute value is ignored (presence alone is the switch),
+      // so partners can drop it on a link/button/CMS field with no config.
+      const manageTrigger = target.closest(`[${MANAGE_ATTR}]`);
+      if (manageTrigger) {
+        event.preventDefault();
+        const tenant = manageTrigger.getAttribute("data-fleethq-tenant") || undefined;
+        buildManageUrl({ tenant })
+          .then((url) =>
+            openInlineCheckout({
+              anchor: manageTrigger,
+              target: resolveInlineTarget(manageTrigger),
+              title: "Manage your booking",
+              url,
+              fleetId: 0,
+            }),
+          )
+          .catch((err) => console.warn("[FleetHQEmbed] openManage failed:", err));
+        return;
+      }
+
+      // Book trigger — opens the checkout for a specific fleet id.
       const trigger = target.closest(`[${AUTO_ATTR}]`);
       if (!trigger) return;
       const params = parseAutoAttribute(trigger);
@@ -49,28 +90,9 @@ const attachAutoOpen = (): void => {
       event.preventDefault();
 
       const wantsModal = trigger.hasAttribute(MODAL_ATTR);
-      let inlineTarget: Element | null = null;
-      // Priority for picking the inline mount point (least surprising first):
-      //   1. Trigger says exactly where via ``data-fleethq-book-target="<css-selector>"``.
-      //   2. Any element on the page carries the marker attribute
-      //      ``data-fleethq-checkout`` — partners drop that on their preferred
-      //      container without a naming collision.
-      //   3. Legacy id="fleethq-checkout" convention for early adopters.
-      //   4. Fall through → widget inserts right after the trigger button.
-      const targetSelector = trigger.getAttribute("data-fleethq-book-target");
-      if (targetSelector) {
-        try {
-          inlineTarget = document.querySelector(targetSelector);
-        } catch {
-          inlineTarget = null;
-        }
-      }
-      if (!inlineTarget) inlineTarget = document.querySelector("[data-fleethq-checkout]");
-      if (!inlineTarget) inlineTarget = document.getElementById("fleethq-checkout");
-
       const promise = wantsModal
         ? openCheckout(params)
-        : openInlineCheckout({ anchor: trigger, target: inlineTarget, ...params });
+        : openInlineCheckout({ anchor: trigger, target: resolveInlineTarget(trigger), ...params });
       promise.catch((err) => {
         console.warn("[FleetHQEmbed] openCheckout failed:", err);
       });

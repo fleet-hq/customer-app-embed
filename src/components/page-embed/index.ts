@@ -15,7 +15,11 @@ const styles = css`
     width: 100%;
     border: 0;
     background: transparent;
-    transition: height 180ms ease;
+    transition: opacity 260ms ease, height 180ms ease;
+  }
+  .frame.loading {
+    opacity: 0;
+    pointer-events: none;
   }
   :host([overlay]) .anchor {
     position: relative;
@@ -26,7 +30,45 @@ const styles = css`
     position: absolute;
     inset: 0 0 auto 0;
     z-index: 999;
-    transition: height 120ms ease;
+    transition: opacity 260ms ease, height 120ms ease;
+  }
+  .skeleton {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.85) 40%,
+      rgba(255, 255, 255, 0.55) 80%
+    );
+    background-size: 200% 100%;
+    animation: fleethq-skeleton 1.4s ease-in-out infinite;
+    pointer-events: none;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+  }
+  :host([bare]) .skeleton,
+  :host([overlay]) .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.16) 0%,
+      rgba(148, 163, 184, 0.28) 40%,
+      rgba(148, 163, 184, 0.16) 80%
+    );
+    background-size: 200% 100%;
+    box-shadow: none;
+  }
+  @keyframes fleethq-skeleton {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+  .stage {
+    position: relative;
+    display: block;
+    width: 100%;
   }
   .error {
     padding: 32px;
@@ -45,11 +87,14 @@ export class FleetHQPageEmbed extends EmbedElement {
   @property({ type: String }) path = "/fleet";
   @property({ type: Number, attribute: "min-height" }) minHeight = 720;
   @property({ type: String, attribute: "redirect-to" }) redirectTo: string | null = null;
-  @property({ type: Boolean }) bare = false;
+  @property({ type: Boolean, reflect: true }) bare = false;
   @property({ type: Boolean, reflect: true }) overlay = false;
 
   @state() private iframeHeight = 720;
   @state() private frameUrl: string | null = null;
+  @state() private loaded = false;
+
+  private fallbackTimer: number | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -60,12 +105,21 @@ export class FleetHQPageEmbed extends EmbedElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener("message", this.onMessage);
+    if (this.fallbackTimer) {
+      window.clearTimeout(this.fallbackTimer);
+      this.fallbackTimer = null;
+    }
   }
 
   updated(changed: Map<string, unknown>): void {
     super.updated(changed);
     if (this.config && !this.frameUrl) {
       this.frameUrl = this.buildFrameUrl();
+      if (this.frameUrl && this.fallbackTimer == null) {
+        this.fallbackTimer = window.setTimeout(() => {
+          this.loaded = true;
+        }, 8000);
+      }
     }
   }
 
@@ -94,6 +148,15 @@ export class FleetHQPageEmbed extends EmbedElement {
     return url.toString();
   }
 
+  private markLoaded = (): void => {
+    if (this.loaded) return;
+    this.loaded = true;
+    if (this.fallbackTimer) {
+      window.clearTimeout(this.fallbackTimer);
+      this.fallbackTimer = null;
+    }
+  };
+
   private onMessage = (event: MessageEvent): void => {
     if (!this.frameUrl) return;
     if (!originMatches(event.origin, this.frameUrl)) return;
@@ -101,6 +164,7 @@ export class FleetHQPageEmbed extends EmbedElement {
     if (!payload) return;
     switch (payload.type) {
       case "resize": {
+        this.markLoaded();
         const requested = Math.max(this.minHeight, Math.min(payload.height, 5000));
         if (Math.abs(requested - this.iframeHeight) < 8) break;
         this.iframeHeight = requested;
@@ -119,20 +183,26 @@ export class FleetHQPageEmbed extends EmbedElement {
 
   render() {
     if (this.configError) return html`<div class="error">${this.configError}</div>`;
-    if (!this.frameUrl) return nothing;
+    if (!this.frameUrl) {
+      return html`<div class="stage" style="height:${this.minHeight}px"><div class="skeleton"></div></div>`;
+    }
     const iframe = html`
       <iframe
-        class="frame"
+        class=${this.loaded ? "frame" : "frame loading"}
         src=${this.frameUrl}
         title=${this.path}
         allow="payment; clipboard-write"
         style="height:${this.iframeHeight}px"
+        @load=${this.markLoaded}
       ></iframe>
     `;
+    const skeleton = this.loaded
+      ? nothing
+      : html`<div class="skeleton"></div>`;
     if (this.overlay) {
-      return html`<div class="anchor" style="min-height:${this.minHeight}px">${iframe}</div>`;
+      return html`<div class="anchor stage" style="min-height:${this.minHeight}px">${skeleton}${iframe}</div>`;
     }
-    return iframe;
+    return html`<div class="stage" style="min-height:${this.minHeight}px">${skeleton}${iframe}</div>`;
   }
 }
 

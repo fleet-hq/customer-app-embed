@@ -17,6 +17,17 @@ const styles = css`
     background: transparent;
     transition: height 180ms ease;
   }
+  :host([overlay]) .anchor {
+    position: relative;
+    display: block;
+    width: 100%;
+  }
+  :host([overlay]) .frame {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 999;
+    transition: height 120ms ease;
+  }
   .error {
     padding: 32px;
     text-align: center;
@@ -35,6 +46,7 @@ export class FleetHQPageEmbed extends EmbedElement {
   @property({ type: Number, attribute: "min-height" }) minHeight = 720;
   @property({ type: String, attribute: "redirect-to" }) redirectTo: string | null = null;
   @property({ type: Boolean }) bare = false;
+  @property({ type: Boolean, reflect: true }) overlay = false;
 
   @state() private iframeHeight = 720;
   @state() private frameUrl: string | null = null;
@@ -108,7 +120,7 @@ export class FleetHQPageEmbed extends EmbedElement {
   render() {
     if (this.configError) return html`<div class="error">${this.configError}</div>`;
     if (!this.frameUrl) return nothing;
-    return html`
+    const iframe = html`
       <iframe
         class="frame"
         src=${this.frameUrl}
@@ -117,6 +129,10 @@ export class FleetHQPageEmbed extends EmbedElement {
         style="height:${this.iframeHeight}px"
       ></iframe>
     `;
+    if (this.overlay) {
+      return html`<div class="anchor" style="min-height:${this.minHeight}px">${iframe}</div>`;
+    }
+    return iframe;
   }
 }
 

@@ -3,6 +3,7 @@ import "./components/catalog";
 import "./components/search";
 import "./components/book-button";
 import "./components/checkout-overlay";
+import "./components/page-embed";
 
 import { buildBookingUrl } from "./runtime/booking-url";
 import { buildManageUrl } from "./runtime/manage-url";

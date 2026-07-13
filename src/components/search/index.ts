@@ -96,9 +96,19 @@ export class FleetHQSearch extends EmbedElement {
     this.emitEvent("fleethq:search", detail);
     if (this.noRedirect) return;
 
-    const base = this.redirectTo || this.config?.checkout_base_url || "";
-    if (!base) return;
-    const url = new URL(`${base.replace(/\/$/, "")}/browse`);
+    // ``redirect-to`` is used verbatim so partners on Webflow / Wix /
+    // etc. can point search submissions at their own fleets page
+    // ("https://www.rentel.io/book-now"). Only when no override is
+    // supplied do we fall back to ``<checkout_base_url>/browse`` — the
+    // shared hosted catalog on FleetHQ's customer-central deployment.
+    let url: URL;
+    if (this.redirectTo) {
+      url = new URL(this.redirectTo, window.location.href);
+    } else {
+      const base = this.config?.checkout_base_url || "";
+      if (!base) return;
+      url = new URL(`${base.replace(/\/$/, "")}/browse`);
+    }
     url.searchParams.set("pickup", detail.pickup);
     url.searchParams.set("dropoff", detail.dropoff);
     if (detail.locationId) url.searchParams.set("location", String(detail.locationId));

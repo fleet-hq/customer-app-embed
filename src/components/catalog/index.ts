@@ -125,6 +125,20 @@ export class FleetHQFleetCatalog extends EmbedElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // Read pickup / dropoff / location from the current URL when the
+    // caller hasn't provided them as attributes. Lets a partner send a
+    // customer from a search bar on one page (Rentel's homepage) to a
+    // catalog on another (Rentel's Book Now page) without any glue JS —
+    // the catalog just picks the params up automatically.
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (!this.pickup) this.pickup = params.get("pickup");
+      if (!this.dropoff) this.dropoff = params.get("dropoff");
+      const loc = params.get("location") ?? params.get("location_id");
+      if (!this.locationId && loc && !Number.isNaN(Number(loc))) {
+        this.locationId = Number(loc);
+      }
+    }
     this.load();
     window.addEventListener("message", this.messageHandler);
     this.addEventListener("fleethq:book", this.onBookIntercept as unknown as EventListener);

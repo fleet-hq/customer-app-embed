@@ -34,6 +34,7 @@ export class FleetHQPageEmbed extends EmbedElement {
   @property({ type: String }) path = "/fleet";
   @property({ type: Number, attribute: "min-height" }) minHeight = 720;
   @property({ type: String, attribute: "redirect-to" }) redirectTo: string | null = null;
+  @property({ type: Boolean }) bare = false;
 
   @state() private iframeHeight = 720;
   @state() private frameUrl: string | null = null;
@@ -71,6 +72,7 @@ export class FleetHQPageEmbed extends EmbedElement {
     url.searchParams.set("tenant", slug);
     url.searchParams.set("embed", "1");
     if (this.redirectTo) url.searchParams.set("embed_redirect", this.redirectTo);
+    if (this.bare) url.searchParams.set("bare", "1");
 
     const parentParams = new URLSearchParams(window.location.search);
     for (const key of ["pickup", "dropoff", "location", "pickupDate", "pickupTime", "returnDate", "returnTime", "pickupLocId", "dropoffLocId"]) {

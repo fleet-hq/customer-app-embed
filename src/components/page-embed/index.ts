@@ -176,6 +176,12 @@ export class FleetHQPageEmbed extends EmbedElement {
       case "handoff":
         window.location.href = payload.url;
         break;
+      case "scroll-into-view": {
+        const rect = this.getBoundingClientRect();
+        const top = rect.top + window.scrollY - 32;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        break;
+      }
       default:
         break;
     }

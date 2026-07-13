@@ -7,7 +7,8 @@ export type EmbedInboundMessage =
   | { type: "navigate"; url: string }
   | { type: "booking-complete"; bookingId: number; referenceNumber?: string; url?: string }
   | { type: "booking-error"; message: string; code?: string }
-  | { type: "handoff"; url: string };
+  | { type: "handoff"; url: string }
+  | { type: "scroll-into-view" };
 
 export type EmbedOutboundMessage =
   | { type: "hello"; version: string; tenant: string }
